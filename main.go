@@ -15,6 +15,7 @@ type Dependency struct {
 	Name        string
 	Description string
 	URL         string
+	License     string
 }
 
 type Package struct {
@@ -54,8 +55,29 @@ func main() {
 
 	fmt.Printf("Dependencies for %s\n\n", pkg.Name)
 
+	longestName := 0
+	byLicense := map[string][]*Dependency{}
+
 	for _, dep := range pkg.Dependencies {
-		fmt.Printf("  %s - %s\n", dep.Name, dep.Description)
+		if len(dep.Name) > longestName {
+			longestName = len(dep.Name)
+		}
+
+		if _, ok := byLicense[dep.License]; !ok {
+			byLicense[dep.License] = make([]*Dependency, 0)
+		}
+
+		byLicense[dep.License] = append(byLicense[dep.License], dep)
+	}
+
+	for license, deps := range byLicense {
+		fmt.Printf("  %s\n", license)
+
+		for _, dep := range deps {
+			fmt.Printf("    * %-*s - %s\n", longestName, dep.Name, dep.Description)
+		}
+
+		fmt.Print("\n")
 	}
 }
 
@@ -69,10 +91,16 @@ func getFromGithub(userOrOrg, repo string) (*Dependency, error) {
 		return nil, errors.New("no error - no response")
 	}
 
+	license := "N/A"
+	if r.License != nil {
+		license = r.License.GetName()
+	}
+
 	return &Dependency{
 		Name:        *r.Name,
 		Description: *r.Description,
 		URL:         *r.HTMLURL,
+		License:     license,
 	}, nil
 }
 
